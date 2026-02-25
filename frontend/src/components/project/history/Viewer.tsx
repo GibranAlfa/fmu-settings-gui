@@ -13,7 +13,9 @@ import {
   projectGetCacheOptions,
   projectGetCacheQueryKey,
   projectGetProjectQueryKey,
+  projectPatchCacheMaxRevisionsMutation,
   projectPostCacheRestoreMutation,
+  sessionPostRestoreMutation,
 } from "#client/@tanstack/react-query.gen";
 import type {
   CacheResource,
@@ -25,7 +27,9 @@ import { CancelButton, GeneralButton } from "#components/form/button";
 import {
   GenericDialog,
   GenericInnerBox,
+  PageHeader,
   PageList,
+  PageSectionSpacer,
   PageText,
 } from "#styles/common";
 import { ReadableValue } from "./ReadableValue";
@@ -50,6 +54,8 @@ import {
   DiffGroup,
   type DiffKind,
   DiffLegend,
+  ScrollableCardStack,
+  SelectorRow,
   ValuePanel,
   ViewerContainer,
 } from "./Viewer.style";
@@ -197,20 +203,39 @@ function CacheRow({
   );
 }
 
-export function Viewer({ projectReadOnly }: { projectReadOnly: boolean }) {
+export function Viewer({
+  hasProject,
+  projectReadOnly,
+  cacheMaxRevisions,
+}: {
+  hasProject: boolean;
+  projectReadOnly: boolean;
+  cacheMaxRevisions?: number;
+}) {
   const queryClient = useQueryClient();
   const [resource, setResource] = useState<CacheResource>("config.json");
   const [selectedCacheId, setSelectedCacheId] = useState<string | null>(null);
   const [isDiffDialogOpen, setIsDiffDialogOpen] = useState(false);
   const [isRestoreDialogOpen, setIsRestoreDialogOpen] = useState(false);
+  const [isRestoreMemoryDialogOpen, setIsRestoreMemoryDialogOpen] =
+    useState(false);
   const [lastRestoredCacheId, setLastRestoredCacheId] = useState<string | null>(
     null,
   );
+  const [maxRevisions, setMaxRevisions] = useState<number | undefined>(
+    cacheMaxRevisions,
+  );
+
+  // Sync the controlled input when the project value changes (e.g. after save)
+  useEffect(() => {
+    setMaxRevisions(cacheMaxRevisions);
+  }, [cacheMaxRevisions]);
 
   const cachesQuery = useQuery({
     ...projectGetCacheOptions({ query: { resource } }),
     // Cache revisions can change outside this page (after editing config for example)
     refetchOnMount: "always",
+    enabled: hasProject,
     meta: { errorPrefix: "Error loading cache history" },
   });
 
@@ -257,7 +282,7 @@ export function Viewer({ projectReadOnly }: { projectReadOnly: boolean }) {
       path: { revision_id: selectedCacheId ?? "" },
       query: { resource },
     }),
-    enabled: isDiffDialogOpen && selectedCacheId !== null,
+    enabled: hasProject && isDiffDialogOpen && selectedCacheId !== null,
     staleTime: 0, // Force a fresh fetch whenever a diff is opened.
     refetchOnMount: "always", // Diffs depend on current state, avoid stale dialog data.
     meta: { errorPrefix: "Error loading cache details" },
@@ -299,6 +324,35 @@ export function Viewer({ projectReadOnly }: { projectReadOnly: boolean }) {
     },
   });
 
+  const maxRevisionsMutation = useMutation({
+    ...projectPatchCacheMaxRevisionsMutation(),
+    meta: { errorPrefix: "Error saving max snapshots" },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: projectGetProjectQueryKey(),
+      });
+      toast.info("Max snapshots saved.");
+    },
+  });
+
+  const restoreFromMemoryMutation = useMutation({
+    ...sessionPostRestoreMutation(),
+    meta: { errorPrefix: "Error restoring from memory" },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: projectGetProjectQueryKey(),
+      });
+      toast.info("Project resources restored from memory.");
+      setIsRestoreMemoryDialogOpen(false);
+    },
+  });
+
+  function handleSaveMaxRevisions() {
+    maxRevisionsMutation.mutate({
+      body: { cache_max_revisions: maxRevisions },
+    });
+  }
+
   function openDiffDialog(cacheId: string) {
     setSelectedCacheId(cacheId);
     setIsDiffDialogOpen(true);
@@ -332,6 +386,14 @@ export function Viewer({ projectReadOnly }: { projectReadOnly: boolean }) {
     setLastRestoredCacheId(null);
   }, [resource]);
 
+  useEffect(() => {
+    if (!hasProject) {
+      setIsDiffDialogOpen(false);
+      setIsRestoreDialogOpen(false);
+      setSelectedCacheId(null);
+    }
+  }, [hasProject]);
+
   return (
     <ViewerContainer>
       <PageText $marginBottom="0">
@@ -341,6 +403,11 @@ export function Viewer({ projectReadOnly }: { projectReadOnly: boolean }) {
         Use <strong>"View details"</strong> to see what changed between the
         current version and a snapshot, and to <strong>restore</strong> from it.
       </PageText>
+      {!hasProject && (
+        <PageText $marginBottom="0">
+          Project not set. Select a project to view and restore snapshots.
+        </PageText>
+      )}
       {projectReadOnly && (
         <PageText $marginBottom="0">
           Project is read-only. Restore is disabled until the project is opened
@@ -348,56 +415,123 @@ export function Viewer({ projectReadOnly }: { projectReadOnly: boolean }) {
         </PageText>
       )}
 
-      <div style={{ maxWidth: "15em" }}>
-        <Autocomplete
-          label="Resource"
-          optionLabel={(option) => option.label}
-          itemToKey={(option) => option?.value ?? null}
-          options={RESOURCE_OPTIONS.map((option) => ({
-            value: option,
-            label: RESOURCE_LABELS[option],
-          }))}
-          selectedOptions={[
-            {
-              value: resource,
-              label: RESOURCE_LABELS[resource],
-            },
-          ]}
-          onOptionsChange={(changes) => {
-            if (changes.selectedItems.length > 0) {
-              setResource(changes.selectedItems[0].value);
-            }
+      {hasProject && (
+        <>
+          <SelectorRow>
+            <div style={{ maxWidth: "15em" }}>
+              <Autocomplete
+                label="Resource"
+                optionLabel={(option) => option.label}
+                itemToKey={(option) => option?.value ?? null}
+                options={RESOURCE_OPTIONS.map((option) => ({
+                  value: option,
+                  label: RESOURCE_LABELS[option],
+                }))}
+                selectedOptions={[
+                  {
+                    value: resource,
+                    label: RESOURCE_LABELS[resource],
+                  },
+                ]}
+                onOptionsChange={(changes) => {
+                  if (changes.selectedItems.length > 0) {
+                    setResource(changes.selectedItems[0].value);
+                  }
+                }}
+                autoWidth
+              />
+            </div>
+
+            <div
+              style={{ display: "flex", alignItems: "flex-end", gap: "0.5rem" }}
+            >
+              <div style={{ maxWidth: "12em" }}>
+                <Autocomplete
+                  label="Max snapshots"
+                  options={[5, 10, 15, 20]}
+                  optionLabel={(option) => String(option)}
+                  selectedOptions={
+                    maxRevisions !== undefined ? [maxRevisions] : []
+                  }
+                  onOptionsChange={(changes) => {
+                    setMaxRevisions(
+                      changes.selectedItems.length > 0
+                        ? changes.selectedItems[0]
+                        : undefined,
+                    );
+                  }}
+                  autoWidth
+                  disabled={projectReadOnly || maxRevisionsMutation.isPending}
+                />
+              </div>
+              <GeneralButton
+                label="Save"
+                isPending={maxRevisionsMutation.isPending}
+                disabled={
+                  projectReadOnly ||
+                  maxRevisionsMutation.isPending ||
+                  maxRevisions === cacheMaxRevisions
+                }
+                tooltipText={
+                  projectReadOnly
+                    ? "Project is read-only"
+                    : maxRevisions === cacheMaxRevisions
+                      ? "No changes to save"
+                      : undefined
+                }
+                onClick={handleSaveMaxRevisions}
+              />
+            </div>
+          </SelectorRow>
+
+          {cachesQuery.isPending && <PageText>Loading snapshots...</PageText>}
+
+          {cachesQuery.isError && (
+            <PageText>Unable to load snapshot history.</PageText>
+          )}
+
+          {!cachesQuery.isPending &&
+            !cachesQuery.isError &&
+            allCaches.length === 0 && (
+              <PageText>
+                No snapshots found for {RESOURCE_LABELS[resource]}.
+              </PageText>
+            )}
+
+          {cacheEntries.length > 0 && (
+            <ScrollableCardStack>
+              {cacheEntries.map((entry) => (
+                <CacheRow
+                  key={entry.cacheId}
+                  entry={entry}
+                  isSelected={selectedCacheId === entry.cacheId}
+                  onViewDetails={openDiffDialog}
+                />
+              ))}
+            </ScrollableCardStack>
+          )}
+        </>
+      )}
+
+      <PageSectionSpacer />
+
+      <PageHeader $variant="h3">Recover .fmu files</PageHeader>
+      <PageText>
+        If files in your user .fmu directory or in a project .fmu directory are
+        missing or have been accidentally deleted, you can recover them from a
+        backup held by the current server session. Files already on disk will
+        not be changed.
+      </PageText>
+      <div style={{ width: "fit-content" }}>
+        <GeneralButton
+          label="Recover files"
+          isPending={restoreFromMemoryMutation.isPending}
+          disabled={restoreFromMemoryMutation.isPending}
+          onClick={() => {
+            setIsRestoreMemoryDialogOpen(true);
           }}
-          autoWidth
         />
       </div>
-
-      {cachesQuery.isPending && <PageText>Loading snapshots...</PageText>}
-
-      {cachesQuery.isError && (
-        <PageText>Unable to load snapshot history.</PageText>
-      )}
-
-      {!cachesQuery.isPending &&
-        !cachesQuery.isError &&
-        allCaches.length === 0 && (
-          <PageText>
-            No snapshots found for {RESOURCE_LABELS[resource]}.
-          </PageText>
-        )}
-
-      {cacheEntries.length > 0 && (
-        <CardStack>
-          {cacheEntries.map((entry) => (
-            <CacheRow
-              key={entry.cacheId}
-              entry={entry}
-              isSelected={selectedCacheId === entry.cacheId}
-              onViewDetails={openDiffDialog}
-            />
-          ))}
-        </CardStack>
-      )}
 
       <GenericDialog open={isDiffDialogOpen} $maxWidth="56em">
         <Dialog.Header>
@@ -534,6 +668,37 @@ export function Viewer({ projectReadOnly }: { projectReadOnly: boolean }) {
           <CancelButton
             onClick={() => {
               setIsRestoreDialogOpen(false);
+            }}
+          />
+        </Dialog.Actions>
+      </GenericDialog>
+
+      <GenericDialog open={isRestoreMemoryDialogOpen} $maxWidth="36em">
+        <Dialog.Header>
+          <Dialog.Title>Recover .fmu files</Dialog.Title>
+        </Dialog.Header>
+
+        <Dialog.Content>
+          <PageText>
+            This will recover any missing files in your user .fmu directory and
+            in the current project .fmu directory (if a project is selected)
+            from a backup held by the current server session. Files already
+            present on disk will not be changed.
+          </PageText>
+        </Dialog.Content>
+
+        <Dialog.Actions>
+          <GeneralButton
+            label="Recover"
+            isPending={restoreFromMemoryMutation.isPending}
+            disabled={restoreFromMemoryMutation.isPending}
+            onClick={() => {
+              restoreFromMemoryMutation.mutate({});
+            }}
+          />
+          <CancelButton
+            onClick={() => {
+              setIsRestoreMemoryDialogOpen(false);
             }}
           />
         </Dialog.Actions>
