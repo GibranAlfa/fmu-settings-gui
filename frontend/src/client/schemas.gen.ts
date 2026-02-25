@@ -115,6 +115,70 @@ export const CacheResourceSchema = {
     description: 'Resources that can be cached and restored.'
 } as const;
 
+export const CacheRetentionSchema = {
+    properties: {
+        cache_max_revisions: {
+            type: 'integer',
+            minimum: 5,
+            title: 'Cache Max Revisions',
+            description: 'Maximum number of cache revisions to keep per resource.',
+            default: 5
+        }
+    },
+    type: 'object',
+    title: 'CacheRetention',
+    description: 'Cache retention setting for project resources.'
+} as const;
+
+export const ChangeInfoSchema = {
+    properties: {
+        timestamp: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Timestamp'
+        },
+        change_type: {
+            '$ref': '#/components/schemas/ChangeType'
+        },
+        user: {
+            type: 'string',
+            title: 'User'
+        },
+        path: {
+            type: 'string',
+            format: 'path',
+            title: 'Path'
+        },
+        change: {
+            type: 'string',
+            title: 'Change'
+        },
+        hostname: {
+            type: 'string',
+            title: 'Hostname'
+        },
+        file: {
+            type: 'string',
+            title: 'File'
+        },
+        key: {
+            type: 'string',
+            title: 'Key'
+        }
+    },
+    type: 'object',
+    required: ['change_type', 'user', 'path', 'change', 'hostname', 'file', 'key'],
+    title: 'ChangeInfo',
+    description: 'Represents a change in the changelog file.'
+} as const;
+
+export const ChangeTypeSchema = {
+    type: 'string',
+    enum: ['update', 'remove', 'add', 'reset', 'merge', 'copy'],
+    title: 'ChangeType',
+    description: 'The types of change that can be made on a file.'
+} as const;
+
 export const ClassificationSchema = {
     type: 'string',
     enum: ['asset', 'internal', 'restricted'],
@@ -369,7 +433,7 @@ export const LockInfoSchema = {
             type: 'string',
             pattern: '(\\d+(\\.\\d+){0,2}|\\d+\\.\\d+\\.[a-z0-9]+\\+[a-z0-9.]+)',
             title: 'Version',
-            default: '0.21.0'
+            default: '0.22.0'
         }
     },
     type: 'object',
@@ -466,6 +530,14 @@ export const LockStatusSchema = {
     required: ['is_lock_acquired', 'lock_file_exists'],
     title: 'LockStatus',
     description: 'Information about the project lock status.'
+} as const;
+
+export const Log_ChangeInfo_Schema = {
+    items: {
+        '$ref': '#/components/schemas/ChangeInfo'
+    },
+    type: 'array',
+    title: 'Log[ChangeInfo]'
 } as const;
 
 export const MappingGroupSchema = {
@@ -1392,6 +1464,30 @@ export const StratigraphyIdentifierMappingSchema = {
 
 This is a mapping from stratigraphic identifiers (tops, zones, etc.) to official
 identifiers in SMDA.`
+} as const;
+
+export const SumoAssetSchema = {
+    properties: {
+        name: {
+            type: 'string',
+            title: 'Name',
+            description: 'Name of the asset in Sumo.'
+        },
+        code: {
+            type: 'string',
+            title: 'Code',
+            description: 'Code of the asset in Sumo.'
+        },
+        roleprefix: {
+            type: 'string',
+            title: 'Roleprefix',
+            description: 'Roleprefix of the asset in Sumo.'
+        }
+    },
+    type: 'object',
+    required: ['name', 'code', 'roleprefix'],
+    title: 'SumoAsset',
+    description: 'A valid asset in Sumo.'
 } as const;
 
 export const UserAPIKeysSchema = {

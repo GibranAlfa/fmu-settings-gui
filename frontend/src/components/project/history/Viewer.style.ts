@@ -68,6 +68,15 @@ export const CardStack = styled.div`
   gap: ${tokens.spacings.comfortable.small};
 `;
 
+export const ScrollableCardStack = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: ${tokens.spacings.comfortable.small};
+  max-height: 26.5em;
+  overflow-y: auto;
+  padding-right: ${tokens.spacings.comfortable.small};
+`;
+
 export const DiffFieldHeader = styled.div`
   margin-bottom: ${tokens.spacings.comfortable.small};
 `;
@@ -105,4 +114,12 @@ export const ValuePanel = styled(GenericInnerBox)`
   p {
     margin-top: 0;
   }
+`;
+
+export const SelectorRow = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: ${tokens.spacings.comfortable.medium};
+  flex-wrap: wrap;
 `;
