@@ -10,7 +10,7 @@ import { comment } from "@equinor/eds-icons";
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 
-import fmuLogo from "#assets/fmu_logo.png";
+import fmuLogo from "#assets/fmu-logo.svg";
 import type { LockInfo } from "#client/types.gen";
 import { LockIcon } from "#components/LockStatus";
 import { useProject } from "#services/project";
@@ -21,7 +21,9 @@ import {
   HeaderContainer,
   ProjectInfoContainer,
   ProjectInfoItemContainer,
+  TopBarContainer,
 } from "./Header.style";
+import { AppMenu } from "./home/AppMenu";
 
 function LockStatusIcon({
   isReadOnly,
@@ -162,15 +164,18 @@ export function Header() {
     <HeaderContainer>
       <TopBar>
         <TopBar.Header>
-          <Button
-            variant="ghost"
-            as={Link}
-            to="/"
-            style={{ backgroundColor: "inherit" }}
-          >
-            <FmuLogo src={fmuLogo} />
-          </Button>
-          <Typography variant="h1_bold">FMU Settings</Typography>
+          <TopBarContainer>
+            <AppMenu />
+            <Button
+              variant="ghost"
+              as={Link}
+              to="/"
+              style={{ backgroundColor: "inherit" }}
+            >
+              <FmuLogo src={fmuLogo} />
+            </Button>
+            <Typography>FMU Settings</Typography>
+          </TopBarContainer>
         </TopBar.Header>
         <TopBar.Actions>
           <FeedbackDialog />
