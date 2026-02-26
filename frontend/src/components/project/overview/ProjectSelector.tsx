@@ -17,6 +17,7 @@ import { toast } from "react-toastify";
 
 import {
   projectGetLockStatusQueryKey,
+  projectGetMappingsQueryKey,
   projectGetProjectQueryKey,
   projectGetRmsProjectsQueryKey,
   projectPostInitProjectMutation,
@@ -84,6 +85,15 @@ function ProjectSelectorForm({
     onSuccess: () => {
       void queryClient.invalidateQueries({
         queryKey: projectGetProjectQueryKey(),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: projectGetMappingsQueryKey({
+          path: {
+            mapping_type: "stratigraphy",
+            source_system: "rms",
+            target_system: "smda",
+          },
+        }),
       });
       void queryClient.invalidateQueries({
         queryKey: projectGetLockStatusQueryKey(),
@@ -314,6 +324,15 @@ function ConfirmInitProjectDialog({
     onSuccess: () => {
       void queryClient.invalidateQueries({
         queryKey: projectGetProjectQueryKey(),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: projectGetMappingsQueryKey({
+          path: {
+            mapping_type: "stratigraphy",
+            source_system: "rms",
+            target_system: "smda",
+          },
+        }),
       });
       void queryClient.invalidateQueries({
         queryKey: userGetUserQueryKey(),
