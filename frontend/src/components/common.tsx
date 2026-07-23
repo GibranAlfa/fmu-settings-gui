@@ -1,5 +1,5 @@
 import { useIsAuthenticated, useMsal } from "@azure/msal-react";
-import { Dialog } from "@equinor/eds-core-react";
+import { Dialog, List } from "@equinor/eds-core-react";
 import {
   QueryErrorResetBoundary,
   useSuspenseQuery,
@@ -17,7 +17,10 @@ import { userGetUserOptions } from "#client/@tanstack/react-query.gen";
 import { GeneralButton } from "#components/form/button";
 import type { HealthCheck } from "#services/smda";
 import {
+  ActionButtonsContainer,
   GenericDialog,
+  OrphanWarningContainer,
+  OrphanWarningList,
   PageCode,
   PageHeader,
   PageText,
@@ -37,6 +40,56 @@ type ErrorFallbackProps = {
 
 export function Loading() {
   return <PageText>Loading...</PageText>;
+}
+
+const ORPHAN_LIST_PREVIEW_LIMIT = 20;
+
+export function OrphanWarningBox({
+  message,
+  listItems,
+  buttonLabel,
+  buttonDisabled,
+  buttonIsPending,
+  onRemove,
+}: {
+  message: string;
+  listItems: string[];
+  buttonLabel?: string;
+  buttonDisabled?: boolean;
+  buttonIsPending?: boolean;
+  onRemove?: () => void;
+}) {
+  const visibleListItems = listItems.slice(0, ORPHAN_LIST_PREVIEW_LIMIT);
+  const hiddenItemCount = listItems.length - visibleListItems.length;
+
+  return (
+    <OrphanWarningContainer>
+      <PageText>{message}</PageText>
+
+      <OrphanWarningList>
+        {visibleListItems.map((item) => (
+          <List.Item key={item}>{item}</List.Item>
+        ))}
+        {hiddenItemCount > 0 && (
+          <List.Item key="remaining-items">
+            and {hiddenItemCount} more
+          </List.Item>
+        )}
+      </OrphanWarningList>
+
+      {buttonLabel && onRemove && (
+        <ActionButtonsContainer>
+          <GeneralButton
+            label={buttonLabel}
+            variant="outlined"
+            disabled={buttonDisabled}
+            isPending={buttonIsPending}
+            onClick={onRemove}
+          />
+        </ActionButtonsContainer>
+      )}
+    </OrphanWarningContainer>
+  );
 }
 
 function ErrorFallback({
@@ -125,7 +178,8 @@ export function ConfirmCloseDialog({
   isOpen,
   handleConfirmCloseDecision,
   title = "Discard changes",
-  description = "There are unsaved changes in the form. If the editing is cancelled, all changes will be lost.",
+  description = "There are unsaved changes in the form. " +
+    "If the editing is cancelled, all changes will be lost.",
   question = "Do you want to discard the changes?",
   confirmLabel = "Keep editing",
   cancelLabel = "Discard changes",

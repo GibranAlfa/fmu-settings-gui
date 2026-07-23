@@ -114,6 +114,11 @@ function ProjectSelectorForm({
         }),
       });
       void queryClient.invalidateQueries({
+        queryKey: projectGetMappingsQueryKey({
+          path: mappingsPaths.wellboreRms,
+        }),
+      });
+      void queryClient.invalidateQueries({
         predicate: (query) => {
           const key = query.queryKey[0] as { _id?: string } | undefined;
 
@@ -377,6 +382,11 @@ function ConfirmInitProjectDialog({
       void queryClient.invalidateQueries({
         queryKey: projectGetMappingsQueryKey({
           path: mappingsPaths.stratigraphyRms,
+        }),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: projectGetMappingsQueryKey({
+          path: mappingsPaths.wellboreRms,
         }),
       });
       void queryClient.invalidateQueries({

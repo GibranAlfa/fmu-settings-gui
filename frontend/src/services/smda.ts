@@ -1,8 +1,22 @@
-import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
+import {
+  queryOptions,
+  useQueries,
+  useSuspenseQuery,
+} from "@tanstack/react-query";
 import { isAxiosError } from "axios";
+import { useMemo } from "react";
 
-import { type Options, type SmdaGetHealthData, smdaGetHealth } from "#client";
-import { smdaGetHealthQueryKey } from "#client/@tanstack/react-query.gen";
+import {
+  type FieldItem,
+  type Options,
+  type SmdaGetHealthData,
+  type SmdaWellHeader,
+  smdaGetHealth,
+} from "#client";
+import {
+  smdaGetHealthQueryKey,
+  smdaPostWellHeadersOptions,
+} from "#client/@tanstack/react-query.gen";
 
 export type HealthCheck = {
   status: boolean;
@@ -41,4 +55,53 @@ export function useSmdaHealthCheck(options?: Options<SmdaGetHealthData>) {
       queryKey: smdaGetHealthQueryKey(options),
     }),
   );
+}
+
+export function useSmdaWellHeaders({
+  fields,
+  enabled,
+}: {
+  fields: FieldItem[];
+  enabled: boolean;
+}) {
+  const fieldIdentifiers = useMemo(
+    () => [
+      ...new Set(
+        fields
+          .map((field) => field.identifier)
+          .filter((identifier) => identifier),
+      ),
+    ],
+    [fields],
+  );
+  const { smdaHeaders, isLoading, isError } = useQueries({
+    queries: fieldIdentifiers.map((identifier) => ({
+      ...smdaPostWellHeadersOptions({ body: { identifier } }),
+      enabled,
+      meta: {
+        errorPrefix: `Could not load SMDA wellbore names for ${identifier}`,
+      },
+    })),
+    combine: (results) => {
+      const headersByUuid = new Map<string, SmdaWellHeader>();
+      results.forEach((result) => {
+        result.data?.well_headers.forEach((header) => {
+          headersByUuid.set(header.wellbore_uuid, header);
+        });
+      });
+
+      return {
+        smdaHeaders: [...headersByUuid.values()],
+        isLoading: results.some((result) => result.isLoading),
+        isError: results.some((result) => result.isError),
+      };
+    },
+  });
+
+  return {
+    smdaHeaders,
+    isLoading,
+    isError,
+    hasFields: fieldIdentifiers.length > 0,
+  };
 }
