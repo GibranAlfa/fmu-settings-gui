@@ -7,6 +7,7 @@ import { useSmdaWellHeaders } from "#services/smda";
 import { PageText, WarningBox } from "#styles/common";
 import { MappingActions } from "./Overview.style";
 import { SimulatorMappings } from "./SimulatorMappings";
+import { SmdaMappings } from "./SmdaMappings";
 import { WellboreMappingsTable } from "./WellboreMappingsTable";
 
 export function Overview({
@@ -57,6 +58,16 @@ export function Overview({
         <SimulatorMappings
           mappings={mappings}
           savedRmsWellboreNames={savedRmsWellboreNames}
+          projectReadOnly={projectReadOnly}
+          isSaving={isSaving}
+          saveMappings={saveMappings}
+        />
+        <SmdaMappings
+          savedRmsWellboreNames={savedRmsWellboreNames}
+          nonPlannedRmsWellboreNames={nonPlannedRmsWellboreNames}
+          mappings={mappings}
+          wellHeaders={wellHeaders}
+          smdaHealthStatus={smdaHealthStatus}
           projectReadOnly={projectReadOnly}
           isSaving={isSaving}
           saveMappings={saveMappings}

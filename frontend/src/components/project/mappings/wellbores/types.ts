@@ -1,4 +1,6 @@
-import type { InternalWellboreMappings } from "#client";
+import type { InternalWellboreMappings, MatchCandidate } from "#client";
+
+export type DisplayedMatchQuality = "Exact" | "High" | "Medium";
 
 export type WellboreMappingRow = {
   rmsWellboreName: string;
@@ -12,6 +14,14 @@ export type WellboreMappingRow = {
 export type WellboreMappingFormValue = {
   simulatorName: string;
   smdaUuid: string;
+};
+
+export type AutomaticMatchProposal = {
+  rmsWellboreName: string;
+  smdaName: string;
+  smdaUuid: string;
+  candidate: MatchCandidate;
+  selected: boolean;
 };
 
 export type PendingImport = {

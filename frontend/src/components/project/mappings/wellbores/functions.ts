@@ -1,15 +1,18 @@
 import type {
   InternalWellboreIdentifierMapping,
   InternalWellboreMappings,
+  MatchResult,
   RmsWell,
   SmdaWellHeader,
 } from "#client";
 import {
   emptyName,
+  getOtherSourceUsingTargetUuid,
   type SourceTargetPair,
 } from "#components/project/mapping/utils";
 import { isSmdaWellboreMapping } from "#services/mappings";
 import type {
+  AutomaticMatchProposal,
   PendingImport,
   WellboreMappingFormValue,
   WellboreMappingRow,
@@ -277,6 +280,12 @@ export function removeSimulatorMappings(mappings: InternalWellboreMappings) {
   );
 }
 
+export function removeSmdaMappings(mappings: InternalWellboreMappings) {
+  return pruneUnusedSelfMappings(
+    mappings.filter((mapping) => !isRmsMapping(mapping, "smda")),
+  );
+}
+
 export function wellboreSmdaTargetPairs(
   mappings: InternalWellboreMappings,
 ): SourceTargetPair[] {
@@ -287,4 +296,125 @@ export function wellboreSmdaTargetPairs(
       ? [{ sourceId: mapping.source_id, targetUuid: mapping.target_uuid }]
       : [],
   );
+}
+
+export function selectedMatchProposalPairs(
+  proposals: AutomaticMatchProposal[],
+): SourceTargetPair[] {
+  return proposals
+    .filter((proposal) => proposal.selected)
+    .map((proposal) => ({
+      sourceId: proposal.rmsWellboreName,
+      targetUuid: proposal.smdaUuid,
+    }));
+}
+
+export function createAutomaticMatchProposals(
+  matchResults: MatchResult[],
+  smdaHeaders: SmdaWellHeader[],
+): AutomaticMatchProposal[] {
+  const headersByIdentifier = new Map(
+    smdaHeaders.map((header) => [header.unique_wellbore_identifier, header]),
+  );
+
+  const proposals = matchResults.flatMap((result) => {
+    const candidate = result.matches[0];
+    if (!candidate || candidate.confidence === "low") {
+      return [];
+    }
+    const header = headersByIdentifier.get(candidate.target);
+    if (!header) {
+      return [];
+    }
+
+    return [
+      {
+        rmsWellboreName: result.source,
+        smdaName: header.unique_wellbore_identifier,
+        smdaUuid: header.wellbore_uuid,
+        candidate,
+        selected: candidate.score === 100,
+      },
+    ];
+  });
+  const exactMatchPairs = selectedMatchProposalPairs(proposals);
+
+  return proposals.map((proposal) => ({
+    ...proposal,
+    selected:
+      proposal.selected &&
+      !getOtherSourceUsingTargetUuid(
+        exactMatchPairs,
+        proposal.smdaUuid,
+        proposal.rmsWellboreName,
+      ),
+  }));
+}
+
+export function toggleMatchProposal(
+  proposals: AutomaticMatchProposal[],
+  rmsWellboreName: string,
+) {
+  const selectedPairs = selectedMatchProposalPairs(proposals);
+
+  return proposals.map((proposal) => {
+    if (proposal.rmsWellboreName !== rmsWellboreName) {
+      return proposal;
+    }
+    if (
+      !proposal.selected &&
+      getOtherSourceUsingTargetUuid(
+        selectedPairs,
+        proposal.smdaUuid,
+        proposal.rmsWellboreName,
+      )
+    ) {
+      return proposal;
+    }
+
+    return { ...proposal, selected: !proposal.selected };
+  });
+}
+
+export function applyAutomaticMatchProposals(
+  mappings: InternalWellboreMappings,
+  proposals: AutomaticMatchProposal[],
+) {
+  const selectedProposals = proposals.filter((proposal) => proposal.selected);
+  const selectedRmsWellboreNames = new Set(
+    selectedProposals.map((proposal) => proposal.rmsWellboreName),
+  );
+  const updated = mappings.filter(
+    (mapping) =>
+      !(
+        selectedRmsWellboreNames.has(mapping.source_id) &&
+        isRmsMapping(mapping, "smda")
+      ),
+  );
+  const selfMappedRmsWellboreNames = new Set(
+    updated
+      .filter(
+        (mapping) =>
+          isRmsMapping(mapping, "rms") && mapping.relation_type === "primary",
+      )
+      .map((mapping) => mapping.source_id),
+  );
+
+  selectedProposals.forEach((proposal) => {
+    if (!selfMappedRmsWellboreNames.has(proposal.rmsWellboreName)) {
+      updated.push(rmsSelfMapping(proposal.rmsWellboreName));
+      selfMappedRmsWellboreNames.add(proposal.rmsWellboreName);
+    }
+    updated.push({
+      mapping_type: "wellbore",
+      source_system: "rms",
+      target_system: "smda",
+      relation_type: "primary",
+      source_id: proposal.rmsWellboreName,
+      target_id: proposal.smdaName,
+      target_uuid: proposal.smdaUuid,
+    });
+  });
+
+  return updated;
 }

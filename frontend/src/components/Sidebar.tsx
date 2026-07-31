@@ -93,7 +93,7 @@ export function Sidebar() {
 
   return (
     <EdsSideBar open>
-      <EdsSideBar.Content>
+      <EdsSideBar.Content key={currentPath}>
         <EdsSideBar.Link
           label="Home"
           icon={dashboard}

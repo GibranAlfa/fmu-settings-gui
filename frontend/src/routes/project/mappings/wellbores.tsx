@@ -69,7 +69,7 @@ function RmsProjectContent({
       {!healthCheck.status && (
         <div id="smda-connection-details">
           <SmdaHealthCheckInfo
-            feature="editing SMDA wellbore names"
+            feature="suggesting SMDA wellbore names"
             healthCheck={healthCheck}
             setRequestAcquireSsoAccessToken={setRequestAcquireSsoAccessToken}
           />
