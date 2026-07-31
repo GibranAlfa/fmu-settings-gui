@@ -9,7 +9,11 @@ import {
   type SourceTargetPair,
 } from "#components/project/mapping/utils";
 import { isSmdaWellboreMapping } from "#services/mappings";
-import type { WellboreMappingFormValue, WellboreMappingRow } from "./types";
+import type {
+  PendingImport,
+  WellboreMappingFormValue,
+  WellboreMappingRow,
+} from "./types";
 
 export const wellboreSmdaOptions = {
   empty: {
@@ -46,6 +50,12 @@ function rmsSelfMapping(
     source_id: rmsWellboreName,
     target_id: rmsWellboreName,
   };
+}
+
+function mappingIdentityKey(mapping: InternalWellboreIdentifierMapping) {
+  return [mapping.source_system, mapping.target_system, mapping.source_id].join(
+    ":",
+  );
 }
 
 function resolveSimulatorMapping(
@@ -208,6 +218,63 @@ export function updateWellboreMapping(
     ...(hasCrossSystemMapping ? [rmsSelfMapping(rmsWellboreName)] : []),
     ...replacementMappings,
   ];
+}
+
+export function prepareImportedMappings(
+  importedMappings: InternalWellboreMappings,
+  savedRmsWellboreNames: string[],
+): PendingImport {
+  const savedNames = new Set(savedRmsWellboreNames);
+  const importedRmsWellboreNames = new Set(
+    importedMappings
+      .filter((mapping) => isRmsMapping(mapping, "simulator"))
+      .map((mapping) => mapping.source_id),
+  );
+
+  return {
+    mappings: importedMappings.filter((mapping) =>
+      savedNames.has(mapping.source_id),
+    ),
+    excludedRmsWellboreNames: [...importedRmsWellboreNames]
+      .filter((name) => !savedNames.has(name))
+      .sort(),
+  };
+}
+
+export function mergeImportedMappings(
+  currentMappings: InternalWellboreMappings,
+  importedMappings: InternalWellboreMappings,
+) {
+  const importedIdentityKeys = new Set(
+    importedMappings.map((mapping) => mappingIdentityKey(mapping)),
+  );
+
+  return [
+    ...currentMappings.filter(
+      (mapping) => !importedIdentityKeys.has(mappingIdentityKey(mapping)),
+    ),
+    ...importedMappings,
+  ];
+}
+
+function pruneUnusedSelfMappings(mappings: InternalWellboreMappings) {
+  const crossSystemSourceIds = new Set(
+    mappings
+      .filter((mapping) => mapping.source_system !== mapping.target_system)
+      .map((mapping) => mapping.source_id),
+  );
+
+  return mappings.filter(
+    (mapping) =>
+      mapping.source_system !== mapping.target_system ||
+      crossSystemSourceIds.has(mapping.source_id),
+  );
+}
+
+export function removeSimulatorMappings(mappings: InternalWellboreMappings) {
+  return pruneUnusedSelfMappings(
+    mappings.filter((mapping) => !isRmsMapping(mapping, "simulator")),
+  );
 }
 
 export function wellboreSmdaTargetPairs(
