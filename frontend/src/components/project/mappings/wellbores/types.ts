@@ -1,3 +1,5 @@
+import type { InternalWellboreMappings } from "#client";
+
 export type WellboreMappingRow = {
   rmsWellboreName: string;
   planned: boolean;
@@ -10,4 +12,9 @@ export type WellboreMappingRow = {
 export type WellboreMappingFormValue = {
   simulatorName: string;
   smdaUuid: string;
+};
+
+export type PendingImport = {
+  mappings: InternalWellboreMappings;
+  excludedRmsWellboreNames: string[];
 };
