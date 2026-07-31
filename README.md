@@ -19,7 +19,7 @@ There are two parts to this repo:
 ## Python package
 
 Doing a local pip install will attempt to build the React application behind
-the scenes. This requires a few dependencies (Node, pnpm, ..) that are not
+the scenes. This requires a few dependencies (Node, pnpm, ..) that are not 
 installable via pip. View the [frontend README](/frontend/README.md) for
 instructions.
 
