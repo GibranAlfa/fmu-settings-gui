@@ -18,6 +18,7 @@ import {
   ChangeList,
   ChangeTypeChip,
 } from "./Changelog.style";
+import { ChangelogDetails } from "./ChangelogDetails";
 import { FILE_LABELS, formatEntryDescription, getTypeLabel } from "./utils";
 
 function Content() {
@@ -87,6 +88,7 @@ function Content() {
                   : "(unknown date)"}{" "}
                 by {entry.user}
               </ChangeItemMeta>
+              <ChangelogDetails entry={entry} />
             </ChangeItem>
           );
         })}

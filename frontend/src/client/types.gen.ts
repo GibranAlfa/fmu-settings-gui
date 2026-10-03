@@ -127,6 +127,10 @@ export type ChangeInfo = {
      */
     change: string;
     /**
+     * Structured Diff
+     */
+    structured_diff?: Array<ScalarFieldDiff | ListFieldDiff> | null;
+    /**
      * Hostname
      */
     hostname: string;

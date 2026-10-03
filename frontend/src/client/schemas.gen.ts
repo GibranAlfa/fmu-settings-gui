@@ -156,6 +156,27 @@ export const ChangeInfoSchema = {
             type: 'string',
             title: 'Change'
         },
+        structured_diff: {
+            anyOf: [
+                {
+                    items: {
+                        anyOf: [
+                            {
+                                $ref: '#/components/schemas/ScalarFieldDiff'
+                            },
+                            {
+                                $ref: '#/components/schemas/ListFieldDiff'
+                            }
+                        ]
+                    },
+                    type: 'array'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Structured Diff'
+        },
         hostname: {
             type: 'string',
             title: 'Hostname'

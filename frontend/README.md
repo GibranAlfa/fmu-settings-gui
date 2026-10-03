@@ -125,6 +125,26 @@ added to. Editors like Visual Studio Code should be able to deal naturally with 
 path aliases. The Vite server also handles these aliases, but it requires a restart when
 there are alias changes to the configuration file.
 
+### Changelog details
+
+The homepage changelog uses `ChangelogDetails` to render each entry. Entries with
+a non-null `structured_diff` use the same `ResourceDiffCard` as snapshot comparisons.
+An empty diff shows "No value changes." Historical entries with a missing or null
+field use the legacy string parser, which preserves the original value text.
+
+Mapping details show source and target identifiers and UUIDs, plus their systems
+and relationship type. The API retains the complete affected mapping in each diff.
+The renderer hides the internal `.root` suffix on collection paths.
+
+Run the regression tests with Node.js 22.8 or newer:
+
+```shell
+pnpm test
+```
+
+For a changelog page built separately, render `ChangelogDetails` with the selected
+entry. It handles both formats without parsing structured values from `change`.
+
 ### Formatting and linting
 
 There are two tools configured to do formatting and linting of the TypeScript code:

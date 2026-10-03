@@ -151,3 +151,8 @@ jobs:
         run: |
           cd frontend
           pnpm run build
+
+      - name: Test changelog details
+        run: |
+          cd frontend
+          pnpm test

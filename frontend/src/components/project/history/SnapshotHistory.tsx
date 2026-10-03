@@ -25,7 +25,6 @@ import {
 import type {
   CacheResource,
   ListFieldDiff,
-  ListUpdatedEntry,
   ScalarFieldDiff,
 } from "#client/types.gen";
 import { CancelButton, GeneralButton } from "#components/form/button";
@@ -40,147 +39,25 @@ import {
   queryKeyProjectGetCacheDiff,
   queryKeyProjectGetMappings,
 } from "#utils/query";
-import { ReadableValue } from "./ReadableValue";
+import { ResourceDiffCard } from "../common/ResourceDiffCard";
 import {
   CacheInfoBox,
   CardStack,
-  ChangeValueGrid,
   DiffDialogContent,
-  DiffFieldHeader,
-  DiffGroup,
   DiffLegend,
   MaxSnapshotsControls,
   ScrollableCardStack,
   SelectorRow,
   SnapshotInfo,
-  ValuePanel,
 } from "./SnapshotHistory.style";
-import type { CacheEntry, DiffKind, SnapshotDeletionImpact } from "./types";
+import type { CacheEntry, SnapshotDeletionImpact } from "./types";
 import {
   formatCacheDateTime,
-  formatFieldPath,
-  formatInlineValue,
-  getListItemKey,
-  getScalarDiffKind,
   getSnapshotLabel,
   isListFieldDiff,
   RESOURCE_LABELS,
   RESOURCE_OPTIONS,
 } from "./utils";
-
-function ListFieldGroup({
-  kind,
-  title,
-  values,
-}: {
-  kind: DiffKind;
-  title: string;
-  values: Array<Record<string, unknown>>;
-}) {
-  if (values.length === 0) {
-    return null;
-  }
-
-  return (
-    <DiffGroup $kind={kind}>
-      <DiffFieldHeader>
-        <strong>
-          {title} ({String(values.length)})
-        </strong>
-      </DiffFieldHeader>
-
-      <CardStack>
-        {values.map((item, idx) => (
-          <ValuePanel key={`${title}-${String(idx)}-${getListItemKey(item)}`}>
-            <ReadableValue value={item} />
-          </ValuePanel>
-        ))}
-      </CardStack>
-    </DiffGroup>
-  );
-}
-
-function UpdatedFieldGroup({ updated }: { updated: Array<ListUpdatedEntry> }) {
-  if (updated.length === 0) {
-    return null;
-  }
-
-  return (
-    <DiffGroup $kind="updated">
-      <DiffFieldHeader>
-        <strong>Updated ({String(updated.length)})</strong>
-      </DiffFieldHeader>
-
-      <CardStack>
-        {updated.map((item, idx) => (
-          <GenericInnerBox
-            key={`updated-${String(idx)}-${formatInlineValue(item.key)}`}
-          >
-            <ChangeValueGrid>
-              <ValuePanel>
-                <strong>Before restore</strong>
-                <ReadableValue value={item.before} />
-              </ValuePanel>
-              <ValuePanel>
-                <strong>After restore</strong>
-                <ReadableValue value={item.after} />
-              </ValuePanel>
-            </ChangeValueGrid>
-          </GenericInnerBox>
-        ))}
-      </CardStack>
-    </DiffGroup>
-  );
-}
-
-function DiffEntryCard({ diff }: { diff: ScalarFieldDiff | ListFieldDiff }) {
-  if (isListFieldDiff(diff)) {
-    return (
-      <GenericInnerBox>
-        <DiffFieldHeader>
-          <strong>{formatFieldPath(diff.field_path)}</strong>
-        </DiffFieldHeader>
-
-        <CardStack>
-          <ListFieldGroup kind="added" title="Added" values={diff.added} />
-          <ListFieldGroup
-            kind="removed"
-            title="Removed"
-            values={diff.removed}
-          />
-          <UpdatedFieldGroup updated={diff.updated} />
-        </CardStack>
-      </GenericInnerBox>
-    );
-  }
-
-  const kind = getScalarDiffKind(diff);
-
-  return (
-    <GenericInnerBox>
-      <DiffFieldHeader>
-        <strong>{formatFieldPath(diff.field_path)}</strong>
-      </DiffFieldHeader>
-
-      <DiffGroup $kind={kind}>
-        <DiffFieldHeader>
-          <strong>{kind.charAt(0).toUpperCase() + kind.slice(1)} (1)</strong>
-        </DiffFieldHeader>
-
-        <ChangeValueGrid>
-          <ValuePanel>
-            <strong>Before restore</strong>
-            <ReadableValue value={diff.before} />
-          </ValuePanel>
-          <ValuePanel>
-            <strong>After restore</strong>
-            <ReadableValue value={diff.after} />
-          </ValuePanel>
-        </ChangeValueGrid>
-      </DiffGroup>
-    </GenericInnerBox>
-  );
-}
 
 function CacheRow({
   entry,
@@ -289,7 +166,7 @@ function DiffDetailsDialog({
 
           <CardStack>
             {diffEntries?.map((diff, index) => (
-              <DiffEntryCard
+              <ResourceDiffCard
                 key={`${diff.field_path}-${String(index)}-${isListFieldDiff(diff) ? "list" : "scalar"}`}
                 diff={diff}
               />
